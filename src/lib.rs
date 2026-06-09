@@ -180,7 +180,7 @@ impl Vars {
 
     fn lookup_operand(&self, op: &chasm_ir::Operand) -> RegOp {
         match op {
-            Operand::Constant(constant) => RegOp::Indirect(RawRegOp::Value(constant.clone())),
+            Operand::Constant(constant) => RegOp::Direct(RawRegOp::Value(constant.clone())),
             Operand::Variable(variable) => self.lookup(variable),
         }
     }
