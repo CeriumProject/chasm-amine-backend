@@ -280,7 +280,7 @@ fn determine_allocations(
             let is_referenced = inner
                 .iter_rec()
                 .any(|inst| matches!(inst, ChasmInstruction::Reference(_, s) if s == name));
-            let may_be_volatile = inner.iter_rec().any(|inst| {
+            let may_be_volatile = !inner.iter_rec().any(|inst| {
                 matches!(
                     inst,
                     ChasmInstruction::SingleOp(chasm_ir::SingleOpOpcode::Call, _)
