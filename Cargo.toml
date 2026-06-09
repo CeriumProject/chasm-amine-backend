@@ -1,0 +1,8 @@
+[package]
+name = "chasm-amine-backend"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+chasm-ir = { git = "https://github.com/CeriumProject/chasm-ir.git" }
+amine-asm = { git = "https://github.com/CeriumProject/amine-asm.git" }
