@@ -1,11 +1,11 @@
 use amine_asm::instruction::Instruction as AmineInstruction;
-use amine_asm::opcode::{
-    NoOpOpcode as ANOO, SingleOpOpcode as ASOO,
-    TwoOpOpcode as ATOO,
-};
+use amine_asm::opcode::{NoOpOpcode as ANOO, SingleOpOpcode as ASOO, TwoOpOpcode as ATOO};
 use amine_asm::operand::{RawRegOp, RegOp, Register};
 use chasm_ir::iter::IntoInstIter;
-use chasm_ir::{Instruction as ChasmInstruction, NoOpOpcode as CNOO, NoOpOpcode, Operand, SingleOpOpcode as CSOO, SingleOpOpcode, TwoOpOpcode as CTOO, TwoOpOpcode};
+use chasm_ir::{
+    Instruction as ChasmInstruction, NoOpOpcode as CNOO, NoOpOpcode, Operand,
+    SingleOpOpcode as CSOO, SingleOpOpcode, TwoOpOpcode as CTOO, TwoOpOpcode,
+};
 use std::collections::HashMap;
 use std::vec::IntoIter;
 
@@ -36,9 +36,24 @@ fn compile_section(section: &chasm_ir::Section) -> Vec<AmineInstruction> {
     );
     let offsets = find_offsets(&allocations);
     let mut allocations = allocations.into_iter();
-    let mut vars = Vars::new(section.signature.as_ref().unwrap().1.iter().map(|(name, _)| name.to_owned()).collect());
-    let body = section.body.iter().flat_map(|inst| compile_inst(inst, &mut vars, &mut allocations, offsets.1.clone()));
-    vec![AmineInstruction::Label(section.name.to_owned())].into_iter().chain(body).collect()
+    let mut vars = Vars::new(
+        section
+            .signature
+            .as_ref()
+            .unwrap()
+            .1
+            .iter()
+            .map(|(name, _)| name.to_owned())
+            .collect(),
+    );
+    let body = section
+        .body
+        .iter()
+        .flat_map(|inst| compile_inst(inst, &mut vars, &mut allocations, offsets.1.clone()));
+    vec![AmineInstruction::Label(section.name.to_owned())]
+        .into_iter()
+        .chain(body)
+        .collect()
     // TODO: memory setup
 }
 
@@ -66,18 +81,29 @@ fn compile_inst(
             todo!()
         }
         ChasmInstruction::Receive(dst, idx) => vec![
-            AmineInstruction::TwoOp(ATOO::Mov, vars.lookup_operand(&dst), RegOp::Direct(RawRegOp::Register(Register::RS))),
-            AmineInstruction::TwoOp(ATOO::Lookup, vars.lookup_operand(&dst), RegOp::Direct(RawRegOp::Value(*idx as u16))),
+            AmineInstruction::TwoOp(
+                ATOO::Mov,
+                vars.lookup_operand(&dst),
+                RegOp::Direct(RawRegOp::Register(Register::RS)),
+            ),
+            AmineInstruction::TwoOp(
+                ATOO::Lookup,
+                vars.lookup_operand(&dst),
+                RegOp::Direct(RawRegOp::Value(*idx as u16)),
+            ),
         ],
-        ChasmInstruction::TwoOp(opcode, op1, op2) => {
-            compile_two_op(opcode, op1, op2, vars)
-        }
+        ChasmInstruction::TwoOp(opcode, op1, op2) => compile_two_op(opcode, op1, op2, vars),
         ChasmInstruction::SingleOp(opcode, op) => compile_single_op(opcode, op, vars),
         ChasmInstruction::NoOp(opcode) => compile_no_op(opcode),
     }
 }
 
-fn compile_two_op(opcode: &CTOO, op1: &Operand, op2: &Operand, vars: &Vars) -> Vec<AmineInstruction> {
+fn compile_two_op(
+    opcode: &CTOO,
+    op1: &Operand,
+    op2: &Operand,
+    vars: &Vars,
+) -> Vec<AmineInstruction> {
     use AmineInstruction::TwoOp as AITO;
     let opcode = match opcode {
         TwoOpOpcode::Mov => ATOO::Mov,
@@ -103,7 +129,11 @@ fn compile_two_op(opcode: &CTOO, op1: &Operand, op2: &Operand, vars: &Vars) -> V
         TwoOpOpcode::Ftoi => ATOO::Ftoi,
         TwoOpOpcode::Ftou => ATOO::Ftou,
     };
-    vec![AITO(opcode, vars.lookup_operand(&op1), vars.lookup_operand(&op2))]
+    vec![AITO(
+        opcode,
+        vars.lookup_operand(&op1),
+        vars.lookup_operand(&op2),
+    )]
 }
 
 fn compile_single_op(opcode: &CSOO, op: &Operand, vars: &Vars) -> Vec<AmineInstruction> {
@@ -249,15 +279,7 @@ fn determine_allocations(
         ChasmInstruction::Alloc(name, _, inner) => {
             let is_referenced = inner
                 .iter_rec()
-                .flat_map(|inst| match inst {
-                    ChasmInstruction::TwoOp(_, op1, op2) => vec![op1, op2],
-                    ChasmInstruction::SingleOp(_, op) => vec![op],
-                    _ => vec![],
-                })
-                .any(|op| match op {
-                    Operand::Variable(var) => var == name,
-                    _ => false,
-                });
+                .any(|inst| matches!(inst, ChasmInstruction::Reference(_, s) if s == name));
             let may_be_volatile = inner.iter_rec().any(|inst| {
                 matches!(
                     inst,
