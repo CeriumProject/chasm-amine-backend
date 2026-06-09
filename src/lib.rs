@@ -1,3 +1,6 @@
+mod optimize_chasm;
+mod optimize_amine;
+
 use amine_asm::instruction::Instruction as AmineInstruction;
 use amine_asm::opcode::{NoOpOpcode as ANOO, SingleOpOpcode as ASOO, TwoOpOpcode as ATOO};
 use amine_asm::operand::{RawRegOp, RegOp, Register};
@@ -8,6 +11,7 @@ use chasm_ir::{
 };
 use std::collections::HashMap;
 use std::vec::IntoIter;
+use crate::optimize_chasm::minimize;
 
 enum AbstractAddress {
     OuterParam(usize),
@@ -49,7 +53,9 @@ fn compile_section(section: &chasm_ir::Section) -> Vec<AmineInstruction> {
     let body = section
         .body
         .iter()
-        .flat_map(|inst| compile_inst(inst, &mut vars, &mut allocations, offsets.1.clone()));
+        .cloned()
+        .flat_map(minimize)
+        .flat_map(|inst| compile_inst(&inst, &mut vars, &mut allocations, offsets.1.clone()));
     vec![AmineInstruction::Label(section.name.to_owned())]
         .into_iter()
         .chain(body)
