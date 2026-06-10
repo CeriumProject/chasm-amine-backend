@@ -11,6 +11,7 @@ use chasm_ir::{
 };
 use std::collections::HashMap;
 use std::vec::IntoIter;
+use crate::optimize_amine::minimize_amine;
 use crate::optimize_chasm::minimize;
 
 enum AbstractAddress {
@@ -56,10 +57,11 @@ fn compile_section(section: &chasm_ir::Section) -> Vec<AmineInstruction> {
         .cloned()
         .flat_map(minimize)
         .flat_map(|inst| compile_inst(&inst, &mut vars, &mut allocations, offsets.1.clone()));
-    vec![AmineInstruction::Label(section.name.to_owned())]
+    let unminimized = vec![AmineInstruction::Label(section.name.to_owned())]
         .into_iter()
         .chain(body)
-        .collect()
+        .collect();
+    minimize_amine(unminimized)
     // TODO: memory setup
 }
 
@@ -134,6 +136,9 @@ fn compile_two_op(
         TwoOpOpcode::Utof => ATOO::Utof,
         TwoOpOpcode::Ftoi => ATOO::Ftoi,
         TwoOpOpcode::Ftou => ATOO::Ftou,
+        TwoOpOpcode::Ctx => ATOO::Ctx,
+        #[allow(unreachable_patterns)]
+        _ => unimplemented!(),
     };
     vec![AITO(
         opcode,
@@ -147,6 +152,9 @@ fn compile_single_op(opcode: &CSOO, op: &Operand, vars: &Vars) -> Vec<AmineInstr
     match opcode {
         SingleOpOpcode::Call => vec![AISO(ASOO::Call, vars.lookup_operand(&op))],
         SingleOpOpcode::Jmp => vec![AISO(ASOO::Jmp, vars.lookup_operand(&op))],
+        SingleOpOpcode::Dbg => vec![AISO(ASOO::Dbg, vars.lookup_operand(&op))],
+        #[allow(unreachable_patterns)]
+        _ => unimplemented!(),
     }
 }
 
@@ -154,6 +162,7 @@ fn compile_no_op(opcode: &CNOO) -> Vec<AmineInstruction> {
     match opcode {
         NoOpOpcode::Nop => vec![AmineInstruction::NoOp(ANOO::Nop)],
         NoOpOpcode::Ret => vec![AmineInstruction::NoOp(ANOO::Ret)], // TODO: cleanup memory
+        NoOpOpcode::Send => vec![AmineInstruction::NoOp(ANOO::Send)],
         #[allow(unreachable_patterns)]
         _ => unimplemented!(),
     }
