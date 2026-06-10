@@ -29,7 +29,14 @@ struct Allocation {
 }
 
 pub fn compile_chasm_to_amine(ir: &[chasm_ir::Section]) -> Vec<AmineInstruction> {
-    ir.iter().flat_map(compile_section).collect()
+    let mut result = vec![
+        AmineInstruction::TwoOp(ATOO::Mov, RegOp::Direct(RawRegOp::Register(Register::RS)), RegOp::Direct(RawRegOp::Const(String::from("§STACK")))),
+        AmineInstruction::SingleOp(ASOO::Call, RegOp::Direct(RawRegOp::Const(String::from("main")))),
+        AmineInstruction::NoOp(ANOO::Exit),
+    ];
+    result.extend(ir.iter().flat_map(compile_section));
+    result.push(AmineInstruction::Label(String::from("§STACK")));
+    result
 }
 
 fn compile_section(section: &chasm_ir::Section) -> Vec<AmineInstruction> {
