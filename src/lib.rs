@@ -139,7 +139,7 @@ fn compile_inst(
             if is_param {
                 vars.param_depth -= 1;
                 result.push(AmineInstruction::SingleOp(
-                    ASOO::Inc,
+                    ASOO::Dec,
                     RegOp::Direct(RawRegOp::Register(Register::RS)),
                 ));
             }
