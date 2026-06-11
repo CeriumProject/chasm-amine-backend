@@ -336,9 +336,9 @@ fn find_offsets(allocations: &[Allocation]) -> (usize, (usize, usize, usize)) {
         allocations
             .iter()
             .fold((0, 0, 0), |result, allocation| match allocation.address {
-                AbstractAddress::OuterParam(idx) => (result.0.max(idx), result.1, result.2),
-                AbstractAddress::RegVar(idx) => (result.0, result.1.max(idx), result.2),
-                AbstractAddress::StackVar(idx) => (result.0, result.1, result.2.max(idx)),
+                AbstractAddress::OuterParam(idx) => (result.0.max(idx + 1), result.1, result.2),
+                AbstractAddress::RegVar(idx) => (result.0, result.1.max(idx + 1), result.2),
+                AbstractAddress::StackVar(idx) => (result.0, result.1, result.2.max(idx + 1)),
                 _ => result,
             });
     (
