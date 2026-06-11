@@ -123,6 +123,7 @@ fn compile_inst(
             let is_param = matches!(inst, ChasmInstruction::Param(_, _, _));
             let mut result = Vec::new();
             if is_param {
+                vars.param_depth += 1;
                 result.push(AmineInstruction::SingleOp(
                     ASOO::Inc,
                     RegOp::Direct(RawRegOp::Register(Register::RS)),
@@ -136,6 +137,7 @@ fn compile_inst(
             );
             vars.pop_scope();
             if is_param {
+                vars.param_depth -= 1;
                 result.push(AmineInstruction::SingleOp(
                     ASOO::Inc,
                     RegOp::Direct(RawRegOp::Register(Register::RS)),
@@ -231,6 +233,7 @@ fn compile_no_op(opcode: &CNOO, vars: &Vars) -> Vec<AmineInstruction> {
 }
 struct Vars {
     scopes: Vec<HashMap<String, RegOp>>,
+    param_depth: usize,
     epilogue: Vec<AmineInstruction>,
 }
 
@@ -249,6 +252,7 @@ impl Vars {
             .collect();
         Vars {
             scopes: vec![map],
+            param_depth: 0,
             epilogue,
         }
     }
@@ -274,7 +278,7 @@ impl Vars {
                 RegOp::Indirect(RawRegOp::Value((idx + offsets.0) as u16))
             }
             AbstractAddress::InnerParam(idx) => {
-                RegOp::Indirect(RawRegOp::Value((idx + offsets.2) as u16))
+                RegOp::Indirect(RawRegOp::Value((idx + offsets.2 + self.param_depth) as u16))
             }
             AbstractAddress::OuterResult(idx) => RegOp::Indirect(RawRegOp::Value(idx as u16)),
             _ => return,
