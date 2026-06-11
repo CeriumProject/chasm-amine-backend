@@ -157,7 +157,7 @@ fn compile_inst(
             AmineInstruction::TwoOp(
                 ATOO::Lookup,
                 vars.lookup_operand(&dst),
-                RegOp::Direct(RawRegOp::Value(*idx as u16)),
+                RegOp::Direct(RawRegOp::Value(*idx as u16 + 2)),
             ),
         ],
         ChasmInstruction::TwoOp(opcode, op1, op2) => compile_two_op(opcode, op1, op2, vars),
