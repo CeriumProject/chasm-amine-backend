@@ -120,9 +120,7 @@ fn compile_inst(
         ChasmInstruction::Alloc(name, _, body)
         | ChasmInstruction::Param(name, _, body)
         | ChasmInstruction::Result(name, _, body) => {
-            dbg!(&inst);
             let is_param = matches!(inst, ChasmInstruction::Param(_, _, _));
-            dbg!(&is_param);
             let mut result = Vec::new();
             if is_param {
                 vars.param_depth += 1;

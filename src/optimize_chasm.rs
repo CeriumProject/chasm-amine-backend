@@ -11,11 +11,11 @@ pub(crate) fn minimize(instruction: chasm_ir::Instruction) -> Option<chasm_ir::I
         }
         Instruction::Param(name, size, body) => {
             let body = body.into_iter().flat_map(minimize).collect();
-            Some(Instruction::Alloc(name, size, body))
+            Some(Instruction::Param(name, size, body))
         }
         Instruction::Result(name, size, body) => {
             let body = body.into_iter().flat_map(minimize).collect();
-            Some(Instruction::Alloc(name, size, body))
+            Some(Instruction::Result(name, size, body))
         }
         Instruction::TwoOp(TOO::Add | TOO::Sub | TOO::Shl | TOO::Shr, _, Operand::Constant(0)) => {
             None
