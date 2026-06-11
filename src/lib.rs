@@ -79,7 +79,6 @@ fn compile_section(section: &chasm_ir::Section) -> Vec<AmineInstruction> {
         .chain(body)
         .collect();
     minimize_amine(unminimized)
-    // TODO: memory setup
 }
 
 fn prologue(offsets: &(usize, (usize, usize, usize))) -> Vec<AmineInstruction> {
