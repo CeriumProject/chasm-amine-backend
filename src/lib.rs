@@ -222,8 +222,8 @@ fn compile_no_op(opcode: &CNOO, vars: &Vars) -> Vec<AmineInstruction> {
     match opcode {
         NoOpOpcode::Nop => vec![AmineInstruction::NoOp(ANOO::Nop)],
         NoOpOpcode::Ret => {
-            let mut result = vec![AmineInstruction::NoOp(ANOO::Ret)];
-            result.extend(vars.epilogue.clone());
+            let mut result = vars.epilogue.clone();
+            result.push(AmineInstruction::NoOp(ANOO::Ret));
             result
         }
         NoOpOpcode::Send => vec![AmineInstruction::NoOp(ANOO::Send)],
