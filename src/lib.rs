@@ -160,7 +160,7 @@ fn compile_inst(
         ],
         ChasmInstruction::TwoOp(opcode, op1, op2) => compile_two_op(opcode, op1, op2, vars),
         ChasmInstruction::SingleOp(opcode, op) => compile_single_op(opcode, op, vars),
-        ChasmInstruction::NoOp(opcode) => compile_no_op(opcode),
+        ChasmInstruction::NoOp(opcode) => compile_no_op(opcode, vars),
     }
 }
 
