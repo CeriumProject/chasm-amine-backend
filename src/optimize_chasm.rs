@@ -17,8 +17,14 @@ pub(crate) fn minimize(instruction: chasm_ir::Instruction) -> Option<chasm_ir::I
             let body = body.into_iter().flat_map(minimize).collect();
             Some(Instruction::Alloc(name, size, body))
         }
-        Instruction::TwoOp(TOO::Add | TOO::Sub | TOO::Shl | TOO::Shr, _, Operand::Constant(0)) => None,
-        Instruction::TwoOp(TOO::Mov | TOO::Sub, Operand::Variable(lhs), Operand::Variable(rhs)) if lhs == rhs => None,
+        Instruction::TwoOp(TOO::Add | TOO::Sub | TOO::Shl | TOO::Shr, _, Operand::Constant(0)) => {
+            None
+        }
+        Instruction::TwoOp(TOO::Mov | TOO::Sub, Operand::Variable(lhs), Operand::Variable(rhs))
+            if lhs == rhs =>
+        {
+            None
+        }
         _ => Some(instruction),
     }
 }

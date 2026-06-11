@@ -1,6 +1,8 @@
-mod optimize_chasm;
 mod optimize_amine;
+mod optimize_chasm;
 
+use crate::optimize_amine::minimize_amine;
+use crate::optimize_chasm::minimize;
 use amine_asm::instruction::Instruction as AmineInstruction;
 use amine_asm::opcode::{NoOpOpcode as ANOO, SingleOpOpcode as ASOO, TwoOpOpcode as ATOO};
 use amine_asm::operand::{RawRegOp, RegOp, Register};
@@ -11,8 +13,6 @@ use chasm_ir::{
 };
 use std::collections::HashMap;
 use std::vec::IntoIter;
-use crate::optimize_amine::minimize_amine;
-use crate::optimize_chasm::minimize;
 
 enum AbstractAddress {
     OuterParam(usize),
@@ -30,8 +30,15 @@ struct Allocation {
 
 pub fn compile_chasm_to_amine(ir: &[chasm_ir::Section]) -> Vec<AmineInstruction> {
     let mut result = vec![
-        AmineInstruction::TwoOp(ATOO::Mov, RegOp::Direct(RawRegOp::Register(Register::RS)), RegOp::Direct(RawRegOp::Const(String::from("§STACK")))),
-        AmineInstruction::SingleOp(ASOO::Call, RegOp::Direct(RawRegOp::Const(String::from("main")))),
+        AmineInstruction::TwoOp(
+            ATOO::Mov,
+            RegOp::Direct(RawRegOp::Register(Register::RS)),
+            RegOp::Direct(RawRegOp::Const(String::from("§STACK"))),
+        ),
+        AmineInstruction::SingleOp(
+            ASOO::Call,
+            RegOp::Direct(RawRegOp::Const(String::from("main"))),
+        ),
         AmineInstruction::NoOp(ANOO::Exit),
     ];
     result.extend(ir.iter().flat_map(compile_section));
@@ -39,6 +46,7 @@ pub fn compile_chasm_to_amine(ir: &[chasm_ir::Section]) -> Vec<AmineInstruction>
     result
 }
 
+/// [previous stack] [stack frame data] | [results] [stack vars] [stored regs] [parameters]
 fn compile_section(section: &chasm_ir::Section) -> Vec<AmineInstruction> {
     let mut allocations = Vec::new();
     determine_allocations(
@@ -57,6 +65,7 @@ fn compile_section(section: &chasm_ir::Section) -> Vec<AmineInstruction> {
             .iter()
             .map(|(name, _)| name.to_owned())
             .collect(),
+        epilogue(&offsets),
     );
     let body = section
         .body
@@ -66,10 +75,37 @@ fn compile_section(section: &chasm_ir::Section) -> Vec<AmineInstruction> {
         .flat_map(|inst| compile_inst(&inst, &mut vars, &mut allocations, offsets.1.clone()));
     let unminimized = vec![AmineInstruction::Label(section.name.to_owned())]
         .into_iter()
+        .chain(prologue(&offsets))
         .chain(body)
         .collect();
     minimize_amine(unminimized)
     // TODO: memory setup
+}
+
+fn prologue(offsets: &(usize, (usize, usize, usize))) -> Vec<AmineInstruction> {
+    let mut result = vec![AmineInstruction::TwoOp(
+        ATOO::Add,
+        RegOp::Direct(RawRegOp::Register(Register::RS)),
+        RegOp::Direct(RawRegOp::Value(offsets.1.1 as u16)),
+    )];
+    for _reg_var in 0..offsets.0 {
+        result.push(AmineInstruction::SingleOp(
+            ASOO::Push,
+            RegOp::Direct(RawRegOp::Register(idx_to_reg(_reg_var + 2).unwrap())),
+        ))
+    }
+    result
+}
+
+fn epilogue(offsets: &(usize, (usize, usize, usize))) -> Vec<AmineInstruction> {
+    let mut result = Vec::new();
+    for _reg_var in (0..offsets.0).rev() {
+        result.push(AmineInstruction::SingleOp(
+            ASOO::Pop,
+            RegOp::Direct(RawRegOp::Register(idx_to_reg(_reg_var + 2).unwrap())),
+        ))
+    }
+    result
 }
 
 fn compile_inst(
@@ -80,16 +116,31 @@ fn compile_inst(
 ) -> Vec<AmineInstruction> {
     match inst {
         ChasmInstruction::Sublabel(label) => vec![AmineInstruction::Sublabel(label.to_string())],
+        // worst code ever?
         ChasmInstruction::Alloc(name, _, body)
         | ChasmInstruction::Param(name, _, body)
         | ChasmInstruction::Result(name, _, body) => {
+            let is_param = matches!(inst, ChasmInstruction::Param(_, _, _));
+            let mut result = Vec::new();
+            if is_param {
+                result.push(AmineInstruction::SingleOp(
+                    ASOO::Inc,
+                    RegOp::Direct(RawRegOp::Register(Register::RS)),
+                ));
+            }
             vars.push_scope();
             vars.push_var(allocations.next().unwrap(), offsets);
-            let result = body
-                .into_iter()
-                .flat_map(|a| compile_inst(a, vars, allocations, offsets))
-                .collect();
+            result.extend(
+                body.into_iter()
+                    .flat_map(|a| compile_inst(a, vars, allocations, offsets)),
+            );
             vars.pop_scope();
+            if is_param {
+                result.push(AmineInstruction::SingleOp(
+                    ASOO::Inc,
+                    RegOp::Direct(RawRegOp::Register(Register::RS)),
+                ));
+            }
             result
         }
         ChasmInstruction::Reference(dst, src) => {
@@ -165,10 +216,14 @@ fn compile_single_op(opcode: &CSOO, op: &Operand, vars: &Vars) -> Vec<AmineInstr
     }
 }
 
-fn compile_no_op(opcode: &CNOO) -> Vec<AmineInstruction> {
+fn compile_no_op(opcode: &CNOO, vars: &Vars) -> Vec<AmineInstruction> {
     match opcode {
         NoOpOpcode::Nop => vec![AmineInstruction::NoOp(ANOO::Nop)],
-        NoOpOpcode::Ret => vec![AmineInstruction::NoOp(ANOO::Ret)], // TODO: cleanup memory
+        NoOpOpcode::Ret => {
+            let mut result = vec![AmineInstruction::NoOp(ANOO::Ret)];
+            result.extend(vars.epilogue.clone());
+            result
+        }
         NoOpOpcode::Send => vec![AmineInstruction::NoOp(ANOO::Send)],
         #[allow(unreachable_patterns)]
         _ => unimplemented!(),
@@ -176,10 +231,11 @@ fn compile_no_op(opcode: &CNOO) -> Vec<AmineInstruction> {
 }
 struct Vars {
     scopes: Vec<HashMap<String, RegOp>>,
+    epilogue: Vec<AmineInstruction>,
 }
 
 impl Vars {
-    fn new(parameters: Vec<String>) -> Vars {
+    fn new(parameters: Vec<String>, epilogue: Vec<AmineInstruction>) -> Vars {
         let parameters_len = parameters.len() as i16;
         let map = parameters
             .into_iter()
@@ -191,7 +247,10 @@ impl Vars {
                 )
             })
             .collect();
-        Vars { scopes: vec![map] }
+        Vars {
+            scopes: vec![map],
+            epilogue,
+        }
     }
 
     fn push_scope(&mut self) {
@@ -212,7 +271,7 @@ impl Vars {
                 RegOp::Direct(RawRegOp::Register(idx_to_reg(idx + 2).unwrap()))
             }
             AbstractAddress::StackVar(idx) => {
-                RegOp::Indirect(RawRegOp::Value((idx + offsets.1) as u16))
+                RegOp::Indirect(RawRegOp::Value((idx + offsets.0) as u16))
             }
             AbstractAddress::InnerParam(idx) => {
                 RegOp::Indirect(RawRegOp::Value((idx + offsets.2) as u16))
@@ -252,29 +311,24 @@ fn idx_to_reg(idx: usize) -> Option<Register> {
     }
 }
 
-/// [0]: results, [n]: stored vars, [m]: stack vars, [k]: parameters
+/// [0]: results, [n]: stack vars, [m]: stored vars, [k]: parameters
 /// (reg_var_count, (n, m, k))
 fn find_offsets(allocations: &[Allocation]) -> (usize, (usize, usize, usize)) {
-    let (result_count, reg_var_count, stack_var_count, parameter_count) =
-        allocations.iter().fold((0, 0, 0, 0), |result, allocation| {
-            match allocation.address {
-                AbstractAddress::OuterParam(idx) => {
-                    (result.0.max(idx), result.1, result.2, result.3)
-                }
-                AbstractAddress::RegVar(idx) => (result.0, result.1.max(idx), result.2, result.3),
-                AbstractAddress::StackVar(idx) => (result.0, result.1, result.2.max(idx), result.3),
-                AbstractAddress::InnerParam(idx) => {
-                    (result.0, result.1, result.2, result.3.max(idx))
-                }
+    let (result_count, reg_var_count, stack_var_count) =
+        allocations
+            .iter()
+            .fold((0, 0, 0), |result, allocation| match allocation.address {
+                AbstractAddress::OuterParam(idx) => (result.0.max(idx), result.1, result.2),
+                AbstractAddress::RegVar(idx) => (result.0, result.1.max(idx), result.2),
+                AbstractAddress::StackVar(idx) => (result.0, result.1, result.2.max(idx)),
                 _ => result,
-            }
-        });
+            });
     (
         reg_var_count,
         (
             result_count,
-            result_count + reg_var_count,
-            result_count + reg_var_count + stack_var_count,
+            result_count + stack_var_count,
+            result_count + stack_var_count + reg_var_count,
         ),
     )
 }
