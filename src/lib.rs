@@ -122,6 +122,8 @@ fn compile_inst(
         | ChasmInstruction::Result(name, _, body) => {
             let is_param = matches!(inst, ChasmInstruction::Param(_, _, _));
             let mut result = Vec::new();
+            vars.push_scope();
+            vars.push_var(allocations.next().unwrap(), offsets);
             if is_param {
                 vars.param_depth += 1;
                 result.push(AmineInstruction::SingleOp(
@@ -129,8 +131,6 @@ fn compile_inst(
                     RegOp::Direct(RawRegOp::Register(Register::RS)),
                 ));
             }
-            vars.push_scope();
-            vars.push_var(allocations.next().unwrap(), offsets);
             result.extend(
                 body.into_iter()
                     .flat_map(|a| compile_inst(a, vars, allocations, offsets)),
