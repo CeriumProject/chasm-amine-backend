@@ -145,7 +145,22 @@ fn compile_inst(
             result
         }
         ChasmInstruction::Reference(dst, src) => {
-            todo!()
+            let op = vars.lookup(src);
+            let RegOp::Indirect(RawRegOp::Value(base_offset)) = op else {
+                panic!()
+            };
+            vec![
+                AmineInstruction::TwoOp(
+                    ATOO::Mov,
+                    vars.lookup_operand(&dst),
+                    RegOp::Direct(RawRegOp::Register(Register::RB)),
+                ),
+                AmineInstruction::TwoOp(
+                    ATOO::Add,
+                    vars.lookup_operand(&dst),
+                    RegOp::Direct(RawRegOp::Value(base_offset)),
+                ),
+            ]
         }
         ChasmInstruction::Receive(dst, idx) => vec![
             AmineInstruction::TwoOp(
