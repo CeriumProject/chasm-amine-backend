@@ -58,14 +58,15 @@ fn compile_section(section: &chasm_ir::Section) -> Vec<AmineInstruction> {
     );
     let offsets = find_offsets(&allocations);
     let mut allocations = allocations.into_iter();
-    let mut vars = Vars::new(
-        section
-            .signature
-            .as_ref()
-            .map(|(_, params)| params.iter().map(|(name, _)| name.to_owned()).collect())
-            .unwrap_or_else(|| Vec::new()),
-        epilogue(&offsets),
-    );
+    let (parameters, prologue, epilogue) = match section
+        .signature
+        .as_ref()
+        .map(|(_, params)| params.iter().map(|(name, _)| name.to_owned()).collect())
+    {
+        Some(parameters) => (parameters, prologue(&offsets), epilogue(&offsets)),
+        None => (Vec::new(), Vec::new(), Vec::new()),
+    };
+    let mut vars = Vars::new(parameters, epilogue);
     let body = section
         .body
         .iter()
@@ -74,7 +75,7 @@ fn compile_section(section: &chasm_ir::Section) -> Vec<AmineInstruction> {
         .flat_map(|inst| compile_inst(&inst, &mut vars, &mut allocations, offsets.1.clone()));
     let unminimized = vec![AmineInstruction::Label(section.name.to_owned())]
         .into_iter()
-        .chain(prologue(&offsets))
+        .chain(prologue)
         .chain(body)
         .chain(vec![AmineInstruction::Blank])
         .collect();
@@ -271,7 +272,15 @@ struct Vars {
 }
 
 impl Vars {
-    fn new(parameters: Vec<String>, epilogue: Vec<AmineInstruction>) -> Vars {
+    fn empty() -> Self {
+        Vars {
+            scopes: Vec::new(),
+            param_depth: 0,
+            epilogue: Vec::new(),
+        }
+    }
+
+    fn new(parameters: Vec<String>, epilogue: Vec<AmineInstruction>) -> Self {
         let parameters_len = parameters.len() as i16;
         let map = parameters
             .into_iter()
