@@ -1,3 +1,5 @@
+#![feature(linked_list_cursors)]
+
 mod optimize_amine;
 mod optimize_chasm;
 

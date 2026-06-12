@@ -5,7 +5,7 @@ version = 4
 [[package]]
 name = "amine-asm"
 version = "0.1.0"
-source = "git+https://github.com/CeriumProject/amine-asm.git#04693637fdae8d8ac3a6d020b5bbe134e5401777"
+source = "git+https://github.com/CeriumProject/amine-asm.git#c3b996160cc255de1867dd74e61e5ae4d0fe4b0f"
 
 [[package]]
 name = "chasm-amine-backend"
