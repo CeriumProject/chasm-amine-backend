@@ -79,6 +79,7 @@ fn compile_section(section: &chasm_ir::Section) -> Vec<AmineInstruction> {
         .into_iter()
         .chain(prologue(&offsets))
         .chain(body)
+        .chain(vec![AmineInstruction::Blank])
         .collect();
     minimize_amine(unminimized)
 }
