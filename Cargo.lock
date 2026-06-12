@@ -5,7 +5,7 @@ version = 4
 [[package]]
 name = "amine-asm"
 version = "0.1.0"
-source = "git+https://github.com/CeriumProject/amine-asm.git#c3b996160cc255de1867dd74e61e5ae4d0fe4b0f"
+source = "git+https://github.com/CeriumProject/amine-asm.git#632ee52119afc4b45d8ffec3ddafebaa2d9a515a"
 
 [[package]]
 name = "chasm-amine-backend"
@@ -18,4 +18,4 @@ dependencies = [
 [[package]]
 name = "chasm-ir"
 version = "0.1.0"
-source = "git+https://github.com/CeriumProject/chasm-ir.git#572f153671650289fbd67e249aa89218bb704156"
+source = "git+https://github.com/CeriumProject/chasm-ir.git#e1953fed26161d3eace1c2c924eecf64adbcd8eb"

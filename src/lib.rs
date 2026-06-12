@@ -7,10 +7,10 @@ use crate::optimize_amine::minimize_amine;
 use crate::optimize_chasm::minimize;
 use amine_asm::instruction::Instruction as AmineInstruction;
 use amine_asm::opcode::{NoOpOpcode as ANOO, SingleOpOpcode as ASOO, TwoOpOpcode as ATOO};
-use amine_asm::operand::{RawRegOp, RegOp, Register};
+use amine_asm::operand::{ConstOp, RawRegOp, RegOp, Register};
 use chasm_ir::iter::IntoInstIter;
 use chasm_ir::{
-    Instruction as ChasmInstruction, NoOpOpcode as CNOO, NoOpOpcode, Operand,
+    Instruction as ChasmInstruction, Instruction, NoOpOpcode as CNOO, NoOpOpcode, Operand,
     SingleOpOpcode as CSOO, SingleOpOpcode, TwoOpOpcode as CTOO, TwoOpOpcode,
 };
 use std::collections::HashMap;
@@ -180,6 +180,25 @@ fn compile_inst(
         ChasmInstruction::TwoOp(opcode, op1, op2) => compile_two_op(opcode, op1, op2, vars),
         ChasmInstruction::SingleOp(opcode, op) => compile_single_op(opcode, op, vars),
         ChasmInstruction::NoOp(opcode) => compile_no_op(opcode, vars),
+        Instruction::RawWords(words) => {
+            let ops = words
+                .iter()
+                .map(|op| match op {
+                    Operand::Constant(constant) => ConstOp::Value(*constant),
+                    Operand::Variable(variable) => ConstOp::Const(variable.clone()),
+                })
+                .collect();
+            vec![AmineInstruction::RawWords(ops)]
+        }
+        Instruction::Definition(name, value) => {
+            vec![AmineInstruction::Define(
+                name.clone(),
+                match value {
+                    Operand::Constant(constant) => ConstOp::Value(*constant),
+                    Operand::Variable(variable) => ConstOp::Const(variable.clone()),
+                },
+            )]
+        }
     }
 }
 
