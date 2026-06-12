@@ -62,11 +62,8 @@ fn compile_section(section: &chasm_ir::Section) -> Vec<AmineInstruction> {
         section
             .signature
             .as_ref()
-            .unwrap()
-            .1
-            .iter()
-            .map(|(name, _)| name.to_owned())
-            .collect(),
+            .map(|(_, params)| params.iter().map(|(name, _)| name.to_owned()).collect())
+            .unwrap_or_else(|| Vec::new()),
         epilogue(&offsets),
     );
     let body = section
