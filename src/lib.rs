@@ -83,7 +83,6 @@ fn compile_section(section: &chasm_ir::Section) -> Vec<AmineInstruction> {
 }
 
 fn prologue(offsets: &(usize, (usize, usize, usize))) -> Vec<AmineInstruction> {
-    dbg!(&offsets);
     let mut result = vec![AmineInstruction::TwoOp(
         ATOO::Add,
         RegOp::Direct(RawRegOp::Register(Register::RS)),
