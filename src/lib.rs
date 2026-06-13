@@ -83,6 +83,7 @@ fn compile_section(section: &chasm_ir::Section) -> Vec<AmineInstruction> {
 }
 
 fn prologue(offsets: &(usize, (usize, usize, usize))) -> Vec<AmineInstruction> {
+    dbg!(&offsets);
     let mut result = vec![AmineInstruction::TwoOp(
         ATOO::Add,
         RegOp::Direct(RawRegOp::Register(Register::RS)),
@@ -364,7 +365,7 @@ fn find_offsets(allocations: &[Allocation]) -> (usize, (usize, usize, usize)) {
         allocations
             .iter()
             .fold((0, 0, 0), |result, allocation| match allocation.address {
-                AbstractAddress::OuterParam(idx) => (result.0.max(idx + 1), result.1, result.2),
+                AbstractAddress::OuterResult(idx) => (result.0.max(idx + 1), result.1, result.2),
                 AbstractAddress::RegVar(idx) => (result.0, result.1.max(idx + 1), result.2),
                 AbstractAddress::StackVar(idx) => (result.0, result.1, result.2.max(idx + 1)),
                 _ => result,
