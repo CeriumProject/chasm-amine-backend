@@ -18,4 +18,4 @@ dependencies = [
 [[package]]
 name = "chasm-ir"
 version = "0.1.0"
-source = "git+https://github.com/CeriumProject/chasm-ir.git#e1953fed26161d3eace1c2c924eecf64adbcd8eb"
+source = "git+https://github.com/CeriumProject/chasm-ir.git#e8ba8137c44a202050b0ff82e5f86f15b5e02036"

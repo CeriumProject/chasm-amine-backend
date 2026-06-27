@@ -231,6 +231,11 @@ fn compile_two_op(
         TwoOpOpcode::Ftoi => ATOO::Ftoi,
         TwoOpOpcode::Ftou => ATOO::Ftou,
         TwoOpOpcode::Ctx => ATOO::Ctx,
+        TwoOpOpcode::Shl => ATOO::Shl,
+        TwoOpOpcode::Shr => ATOO::Shr,
+        TwoOpOpcode::And => ATOO::And,
+        TwoOpOpcode::Xor => ATOO::Xor,
+        TwoOpOpcode::Or => ATOO::Or,
         #[allow(unreachable_patterns)]
         _ => unimplemented!(),
     };
