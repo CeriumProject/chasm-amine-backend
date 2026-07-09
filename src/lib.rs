@@ -217,6 +217,8 @@ fn compile_two_op(
         TwoOpOpcode::Mul => ATOO::Mul,
         TwoOpOpcode::Div => ATOO::Div,
         TwoOpOpcode::Jrnzdec => ATOO::JrnzDec,
+        TwoOpOpcode::Jrnz => ATOO::Jrnz,
+        TwoOpOpcode::Jrz => ATOO::Jrz,
         TwoOpOpcode::Lookup => ATOO::Lookup,
         TwoOpOpcode::Fadd => ATOO::Fadd,
         TwoOpOpcode::Fsub => ATOO::Fsub,
